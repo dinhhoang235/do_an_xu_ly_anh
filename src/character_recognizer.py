@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import os
 from pathlib import Path
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
@@ -16,84 +15,6 @@ class CharacterRecognizer:
         # Kích thước chuẩn cho ký tự
         self.char_width = 20
         self.char_height = 30
-        
-    def load_knn_from_files(self, classifications_file="classifications.txt", 
-                            flattened_images_file="flattened_images.txt"):
-        """
-        Load KNN model từ file giống repository VIETNAMESE_LICENSE_PLATE
-        """
-        print("🔄 Đang load KNN model từ file...")
-        
-        if not Path(classifications_file).exists():
-            print(f"❌ Không tìm thấy {classifications_file}")
-            return False
-        
-        if not Path(flattened_images_file).exists():
-            print(f"❌ Không tìm thấy {flattened_images_file}")
-            return False
-        
-        # Load data
-        classifications = np.loadtxt(classifications_file, np.float32)
-        flattened_images = np.loadtxt(flattened_images_file, np.float32)
-        
-        # Reshape classifications
-        classifications = classifications.reshape((classifications.size, 1))
-        
-        # Tạo KNN model
-        self.knn_model = cv2.ml.KNearest_create()
-        self.knn_model.train(flattened_images, cv2.ml.ROW_SAMPLE, classifications)
-        
-        self.is_trained = True
-        
-        print(f"✅ Đã load KNN model")
-        print(f"   - Số lượng mẫu: {flattened_images.shape[0]}")
-        print(f"   - Feature dimension: {flattened_images.shape[1]}")
-        
-        return True
-        
-    def create_template_dataset(self, vn_plates_folder):
-        """
-        Tạo bộ template từ 22 ảnh Việt Nam
-        """
-        print("🔄 Đang tạo bộ template ký tự...")
-        
-        # Ký tự cần nhận dạng (biển số VN)
-        chars = "0123456789ABCDEFGHKLMNPRSTUVXYZ"
-        
-        # Tạo thư mục template nếu chưa có
-        template_dir = "datasets/character_templates"
-        os.makedirs(template_dir, exist_ok=True)
-        
-        # Dictionary lưu template
-        templates = {}
-        
-        # Với mỗi ký tự, tạo template đơn giản (có thể thay bằng ảnh thật sau)
-        for char in chars:
-            # Tạo ảnh trắng
-            template = np.ones((self.char_height, self.char_width), dtype=np.uint8) * 255
-            
-            # Vẽ ký tự lên ảnh (giả lập - thực tế sẽ dùng ảnh thật từ dataset)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.8
-            thickness = 2
-            
-            # Tính toán vị trí để căn giữa
-            text_size = cv2.getTextSize(char, font, font_scale, thickness)[0]
-            text_x = (self.char_width - text_size[0]) // 2
-            text_y = (self.char_height + text_size[1]) // 2
-            
-            # Vẽ ký tự màu đen
-            cv2.putText(template, char, (text_x, text_y), font, font_scale, 0, thickness)
-            
-            templates[char] = template
-            
-            # Lưu template ra file
-            cv2.imwrite(f"{template_dir}/{char}.png", template)
-        
-        self.char_templates = templates
-        print(f"✅ Đã tạo {len(templates)} template ký tự")
-        
-        return templates
     
     def train_knn(self, character_dataset_path, n_neighbors=5, test_size=0.2):
         """
@@ -270,131 +191,6 @@ class CharacterRecognizer:
         
         return sorted_chars
     
-    def segment_characters_improved(self, plate_image):
-        """
-        Phân tách ký tự cải tiến - dùng Preprocessor pipeline
-        """
-        preprocessor = Preprocessor()
-        
-        # Preprocess với Canny + Morphology
-        _, processed = preprocessor.preprocess(plate_image)
-        
-        # Tìm contours
-        contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, 
-                                       cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Lấy kích thước để tính diện tích
-        height, width = processed.shape
-        roi_area = height * width
-        
-        # Parameters tối ưu
-        Min_char = 0.003
-        Max_char = 0.15
-        
-        char_data = []
-        
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            x, y, w, h = cv2.boundingRect(contour)
-            
-            if h == 0:
-                continue
-            
-            ratio_char = w / h
-            char_area = w * h
-            
-            # Filter
-            if (Min_char * roi_area < char_area < Max_char * roi_area) and \
-               (0.15 < ratio_char < 0.9):
-                # Cắt từ ảnh processed
-                char_img = processed[y:y+h, x:x+w]
-                char_data.append((x, char_img))
-        
-        # Sắp xếp theo vị trí x
-        char_data.sort(key=lambda item: item[0])
-        sorted_chars = [char_img for _, char_img in char_data]
-        
-        return sorted_chars
-    
-    def recognize_template_matching(self, char_image):
-        """
-        Nhận dạng ký tự sử dụng Template Matching
-        """
-        best_char = '?'
-        best_score = -1
-        
-        # Resize ký tự đầu vào
-        resized_char = cv2.resize(char_image, (self.char_width, self.char_height))
-        
-        for char, template in self.char_templates.items():
-            # Template matching
-            result = cv2.matchTemplate(resized_char, template, cv2.TM_CCOEFF_NORMED)
-            score = cv2.minMaxLoc(result)[1]  # Lấy điểm số tốt nhất
-            
-            if score > best_score:
-                best_score = score
-                best_char = char
-        
-        return best_char, best_score
-    
-    def recognize_knn(self, char_image):
-        """
-        Nhận dạng ký tự sử dụng KNN (OpenCV style như VIETNAMESE_LICENSE_PLATE)
-        """
-        if not self.is_trained:
-            return '?', 0.0
-        
-        # Resize về kích thước chuẩn
-        char_resized = cv2.resize(char_image, (self.char_width, self.char_height))
-        
-        # Chuyển sang grayscale nếu cần
-        if len(char_resized.shape) == 3:
-            char_resized = cv2.cvtColor(char_resized, cv2.COLOR_BGR2GRAY)
-        
-        # Flatten thành 1D array và normalize
-        char_flattened = char_resized.flatten().astype(np.float32) / 255.0
-        char_flattened = np.clip(char_flattened, 0, 1).reshape(1, -1)
-        
-        # Predict với sklearn KNN
-        try:
-            probabilities = self.knn_model.predict_proba(char_flattened)[0]
-            predicted_label = self.knn_model.predict(char_flattened)[0]
-            
-            # Lấy confidence (xác suất cao nhất)
-            confidence = np.max(probabilities)
-            
-            predicted_char = predicted_label
-        except Exception as e:
-            # Fallback nếu có lỗi
-            predicted_char = '?'
-            confidence = 0.0
-        
-        return predicted_char, confidence
-    
-    def recognize_plate(self, plate_image, method='template'):
-        """
-        Nhận dạng toàn bộ biển số
-        """
-        # Phân tách ký tự
-        characters = self.segment_characters(plate_image)
-        
-        if not characters:
-            return "", []
-        
-        plate_text = ""
-        recognition_results = []
-        
-        for i, char_img in enumerate(characters):
-            if method == 'knn' and self.is_trained:
-                char, confidence = self.recognize_knn(char_img)
-            else:
-                char, confidence = self.recognize_template_matching(char_img)
-            
-            plate_text += char
-            recognition_results.append((char, confidence))
-        
-        return plate_text, recognition_results
-    
     def save_model(self, filepath):
         """Lưu model KNN"""
         if self.is_trained:
@@ -411,37 +207,6 @@ class CharacterRecognizer:
             print(f"✅ Đã tải model từ: {filepath}")
         except FileNotFoundError:
             print("❌ Không tìm thấy file model")
-    
-    def validate_plate_format(self, plate_text):
-        """
-        Kiểm tra tính hợp lệ của biển số
-        Hỗ trợ biển số Việt Nam và nước ngoài
-        """
-        if not plate_text or len(plate_text.strip()) == 0:
-            return False, "Biển số trống"
-        
-        plate_text = plate_text.upper().strip()
-        
-        # Loại bỏ ký tự không hợp lệ
-        valid_chars = "0123456789ABCDEFGHKLMNPRSTUVXYZ-"
-        
-        # Kiểm tra ký tự
-        for char in plate_text:
-            if char not in valid_chars:
-                return False, f"Ký tự '{char}' không hợp lệ"
-        
-        # Kiểm tra độ dài (biển số thường 6-10 ký tự)
-        if len(plate_text) < 6 or len(plate_text) > 10:
-            return False, f"Độ dài biển số không hợp lệ: {len(plate_text)}"
-        
-        # Nếu có dấu gạch ngang, kiểm tra vị trí
-        if '-' in plate_text:
-            # Format: XXX-YYYY hoặc XXXX-YY
-            parts = plate_text.split('-')
-            if len(parts) != 2:
-                return False, "Định dạng dấu gạch ngang không hợp lệ"
-        
-        return True, "Hợp lệ"
     
     def post_process(self, plate_text):
         """
