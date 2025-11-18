@@ -1,6 +1,6 @@
 # 🚗 License Plate Recognition System
 
-Nhận dạng ký tự từ biển số xe nước ngoài sử dụng KNN + Computer Vision.
+Nhận dạng ký tự từ biển số xe sử dụng xử lý ảnh truyền thống và ML.
 
 **Performance**: 57.81% accuracy | 2/10 perfect match | 10/10 partial match
 
