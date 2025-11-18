@@ -16,18 +16,6 @@ class Preprocessor:
         self.MORPH_KERNEL_SIZE = (5, 5)
     
     def preprocess(self, img_original):
-        """
-        Preprocessing pipeline theo báo cáo:
-        Bước 1: Chuyển ảnh xám
-        Bước 2: Lọc Median để khử nhiễu Salt & Pepper
-        Bước 3: Lọc Gaussian để làm mịn
-        Bước 4: Canny edge detection để phát hiện biên
-        Bước 5: Phép toán hình thái học (Closing + Opening) để nối/tách vùng
-        
-        Returns:
-            - img_grayscale: Ảnh xám
-            - img_processed: Ảnh sau tiền xử lý (canny + morphology)
-        """
         # Bước 1: Chuyển ảnh sang xám
         img_grayscale = cv2.cvtColor(img_original, cv2.COLOR_BGR2GRAY)
         

@@ -17,14 +17,6 @@ class CharacterRecognizer:
         self.char_height = 30
     
     def train_knn(self, character_dataset_path, n_neighbors=5, test_size=0.2):
-        """
-        Huấn luyện mô hình KNN từ dataset ký tự đã cắt
-        
-        Args:
-            character_dataset_path: Đường dẫn đến thư mục chứa các ký tự đã phân loại
-            n_neighbors: Số lượng neighbors cho KNN
-            test_size: Tỷ lệ dữ liệu test
-        """
         print("🔄 Đang tải dataset ký tự...")
         
         X = []  # Features
@@ -119,9 +111,6 @@ class CharacterRecognizer:
         return self.knn_model
     
     def extract_features(self, char_image):
-        """
-        Trích xuất đặc trưng từ ảnh ký tự
-        """
         # Resize về kích thước chuẩn
         resized = cv2.resize(char_image, (self.char_width, self.char_height))
         
@@ -137,9 +126,6 @@ class CharacterRecognizer:
         return features
     
     def segment_characters(self, plate_image):
-        """
-        Phân tách ký tự từ ảnh biển số - giống VIETNAMESE_LICENSE_PLATE
-        """
         # Chuyển ảnh xám nếu cần
         if len(plate_image.shape) == 3:
             gray = cv2.cvtColor(plate_image, cv2.COLOR_BGR2GRAY)
@@ -209,11 +195,6 @@ class CharacterRecognizer:
             print("❌ Không tìm thấy file model")
     
     def post_process(self, plate_text):
-        """
-        Hậu xử lý kết quả nhận dạng
-        - Loại bỏ ký tự nhiễu
-        - Chuẩn hóa định dạng
-        """
         if not plate_text:
             return ""
         

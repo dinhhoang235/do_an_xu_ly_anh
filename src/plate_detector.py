@@ -14,10 +14,6 @@ class PlateDetector:
         self.kernel_size = (5, 5)
         
     def detect_plates(self, image):
-        """
-        Phát hiện biển số xe sử dụng xử lý ảnh truyền thống
-        Trả về list các bounding boxes (x, y, w, h)
-        """
         # Bước 1: Tiền xử lý ảnh
         gray, thresh = self.preprocessor.preprocess(image)
         
@@ -52,9 +48,6 @@ class PlateDetector:
         return eroded
     
     def _find_plate_contours(self, morph_image, original_image):
-        """
-        Tìm contours và lọc theo tiêu chí hình học của biển số
-        """
         plates = []
         
         # Tìm contours
