@@ -1,15 +1,15 @@
 # 🚗 License Plate Recognition System
 
-Nhận dạng ký tự từ biển số xe sử dụng xử lý ảnh truyền thống và ML.
+Nhận dạng ký tự từ biển số xe sử dụng xử lý ảnh truyền thống và ML
 
-**Performance**: 57.81% accuracy | 2/10 perfect match | 10/10 partial match
+**🎯 Performance**: 57.81% accuracy | Best hybrid model trained on 77 images
 
 ---
 
 ## ⚡ Quick Start
 
 ```bash
-# 1. Cài đặt
+# 1. Cài đặt dependencies
 pip install -r requirements.txt
 
 # 2. Chạy ngay (model đã huấn luyện sẵn)
@@ -17,127 +17,112 @@ python main.py --image datasets/kaggle_foreign/test/Cars0.png
 
 # 3. Hoặc xử lý batch
 python main.py --batch datasets/kaggle_foreign/test --output results.csv
+
+# 4. Đánh giá trên dataset
+python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
 ```
 
 ---
 
-## 📖 4 Cách Sử Dụng
+## 📖 4 Chế Độ Chính
 
-### 1️⃣ Single Image
+### 1️⃣ Single Image Processing
+Xử lý một ảnh và hiển thị kết quả với visualization
 ```bash
-python main.py --image datasets/kaggle_foreign/test/Cars0.png
+python main.py --image path/to/image.jpg
 ```
 
-### 2️⃣ Batch Process
+### 2️⃣ Batch Processing
+Xử lý một folder ảnh và lưu kết quả vào CSV
 ```bash
-python main.py --batch datasets/kaggle_foreign/test --output results.csv
+python main.py --batch path/to/folder --output results.csv
 ```
 
-### 3️⃣ Video Processing
-```bash
-python main.py --video input.mp4 --output output.mp4
-```
-
-### 4️⃣ Evaluation
+### 3️⃣ Evaluation & Benchmark
+Đánh giá hệ thống trên dataset với ground truth annotations
 ```bash
 python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
 ```
 
 ---
 
-## 🔄 Full Workflow: Tạo Model Từ Đầu
+## 🔄 Pipeline Chi Tiết
 
-**Copy toàn bộ script:**
+Mỗi ảnh đi qua 5 bước xử lý:
+
+1. **Tiền xử lý**: Chuyển grayscale, blur, normalize
+2. **Phát hiện biển số**: Contour detection, bounding box
+3. **Hiệu chỉnh góc nghiêng**: Skew correction
+4. **Phân vùng ký tự**: Cắt từng ký tự từ biển số
+5. **Nhận dạng ký tự**: KNN prediction trên 20x30 features
+
+---
+
+## 🎓 Xây Dựng Model Từ Đầu
+
+Nếu muốn huấn luyện lại model hoặc thêm dữ liệu:
+
 ```bash
-# Step 1: Auto-extract từ 473 ảnh
+# Step 1: Auto-extract templates từ 473 ảnh
 python scripts/auto_extract_and_label_kaggle.py
 
-# Step 2: Gán nhãn từ 17 test images
+# Step 2: Cắt + gán nhãn từ 17 test images (ground truth)
 python scripts/extract_manual_labels.py
 
 # Step 3: Filter best templates
 python scripts/filter_best_templates.py
 
-# Step 4: Train model hybrid
+# Step 4: Train hybrid KNN model
 python scripts/train_knn_hybrid.py
 
-# Step 5: Test model
-python scripts/test_all_models.py
+# Step 5: Test models
+python scripts/test_models.py
 ```
 
-**Hoặc chạy từng bước:**
+**Hoặc chạy full pipeline một lần:**
 ```bash
-# Chỉ step 1
-python scripts/auto_extract_and_label_kaggle.py
-
-# Chỉ step 2
-python scripts/extract_manual_labels.py
-
-# Chỉ step 3
-python scripts/filter_best_templates.py
-
-# Chỉ step 4
-python scripts/train_knn_hybrid.py
+python scripts/full_pipeline.py
 ```
 
 ---
 
-## 🎯 Scripts
+## 🎯 Core Components
 
-| Script | Mục đích |
+| Tệp | Mục đích |
+|-----|---------|
+| `main.py` | Entry point - 4 chế độ chính (single/batch/video/eval) |
+| `src/preprocessor.py` | Tiền xử lý ảnh (grayscale, blur, normalize) |
+| `src/plate_detector.py` | Phát hiện biển số (contour-based) |
+| `src/skew_corrector.py` | Hiệu chỉnh góc nghiêng |
+| `src/character_recognizer.py` | Segment + nhận dạng ký tự |
+| `models/knn_character_recognizer_hybrid.pkl` | Pre-trained KNN model (57.81%) |
+
+---
+
+## 🛠️ Training Scripts
+
+Để xây dựng model từ đầu:
+
+| Script | Mục đích |
 |--------|---------|
-| `main.py` | 4 chế độ: single/batch/video/eval |
-| `extract_manual_labels.py` | Cắt + gán nhãn từ 17 test images |
-| `filter_best_templates.py` | Chọn 33 templates tốt nhất |
-| `train_knn_hybrid.py` | Train model từ 33 + 46 = 79 ảnh |
-| `test_all_models.py` | So sánh 3 model |
-| `debug_seg_detail.py` | Debug segmentation |
-| `test_hybrid_viz.py` | Test với visualization |
+| `scripts/auto_extract_and_label_kaggle.py` | Auto-extract templates từ 473 ảnh |
+| `scripts/extract_manual_labels.py` | Cắt + gán nhãn ground truth từ test images |
+| `scripts/filter_best_templates.py` | Chọn best 31 templates |
+| `scripts/train_knn_hybrid.py` | Train KNN hybrid model |
+| `scripts/test_models.py` | Benchmark & so sánh models |
+| `scripts/full_pipeline.py` | Run full pipeline in one go |
 
 ---
 
-## 📊 Dataset
+## 📊 Dataset & Model Performance
 
-| Loại | Số Lượng | Accuracy | Ghi chú |
-|------|----------|----------|--------|
-| Templates | 31 | 5.76% | Manual selection |
-| Auto-Labeled | 3100+ | 10.76% | EasyOCR + noise |
-| Manual Labeled | 46 | 100% | Ground truth |
-| **Hybrid** | **77** | **57.81%** | **31 + 46 = BEST** |
+| Model | Training Data | Accuracy | Ghi chú |
+|-------|---------------|----------|--------|
+| **Hybrid KNN** ⭐ | 31 templates + 46 manual | **57.81%** | **Best performance** |
+| Templates-only | 31 manual | 5.76% | Underfitting |
+| Auto-labeled | 3100+ EasyOCR | 10.76% | Noisy data |
 
----
-
-## 📂 Cấu Trúc Thư Mục
-
-```
-license_plate_system/
-├── main.py                                     # Entry point
-├── models/
-│   └── knn_character_recognizer_hybrid.pkl    # Model (57.81%)
-│
-├── datasets/kaggle_foreign/
-│   ├── character_templates/          (31 ảnh best)
-│   ├── characters_manual_labeled/    (46 ảnh ground truth)
-│   ├── characters_auto_labeled/      (3100+ ảnh noise)
-│   ├── test/                         (17 ảnh test)
-│   └── test_annotations.csv          (ground truth)
-│
-├── scripts/
-│   ├── auto_extract_and_label_kaggle.py
-│   ├── extract_manual_labels.py
-│   ├── filter_best_templates.py
-│   ├── train_knn_hybrid.py
-│   ├── test_all_models.py
-│   └── debug_seg_detail.py
-│
-├── src/
-│   ├── character_recognizer.py
-│   ├── preprocessor.py
-│   └── ...
-│
-└── tests/
-    └── test_hybrid_viz.py
-```
+**Hybrid model** kết hợp tốt nhất manual labels (ground truth) + auto-extracted templates.
 
 ---
 
