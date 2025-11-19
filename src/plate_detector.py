@@ -4,35 +4,43 @@ from .preprocessor import Preprocessor
 
 class PlateDetector:
     def __init__(self):
-        self.preprocessor = Preprocessor()
-        
-        # Tham số cho Canny Edge Detection
-        self.canny_thresh1 = 40
-        self.canny_thresh2 = 120
+        # Tham số cho Canny Edge Detection (tuned: 60, 180)
+        self.canny_thresh1 = 60
+        self.canny_thresh2 = 180
         
         # Tham số Morphological Operations
         self.kernel_size = (5, 5)
         
-    def detect_plates(self, image):
-        # Bước 1: Tiền xử lý ảnh
-        gray, thresh = self.preprocessor.preprocess(image)
+        # Tham số lọc contour (cân bằng tốt hơn)
+        self.area_min = 400       # Giảm để bao gồm biển số rất nhỏ
+        self.area_max = 30000     
+        self.aspect_ratio_min = 1.5   # Giảm để bao gồm biển số compact
+        self.aspect_ratio_max = 6.5   # Tăng để bao gồm biển số ngoại hẹp
+        self.solidity_min = 0.25
         
-        # Bước 2: Canny Edge Detection
-        edges = self._canny_edge_detection(thresh)
+        # Bộ lọc vị trí: biển số thường ở phần dưới của ảnh
+        self.max_y_ratio = 0.95  # Biển số không nằm ở 5% trên cùng
         
-        # Bước 3: Morphological Operations
+    def detect_plates(self, preprocessed_image):
+        """
+        Phát hiện biển số từ ảnh đã tiền xử lý
+        Input: Ảnh grayscale, blurred (từ Preprocessor)
+        """
+        # Bước 1: Canny Edge Detection
+        edges = self._canny_edge_detection(preprocessed_image)
+        
+        # Bước 2: Morphological Operations
         morph = self._morphological_operations(edges)
         
-        # Bước 4: Tìm contours và lọc biển số
-        plates = self._find_plate_contours(morph, image)
+        # Bước 3: Tìm contours và lọc biển số
+        # Cần ảnh gốc để lấy kích thước, nên truyền riêng
+        plates = self._find_plate_contours(morph, preprocessed_image)
         
         return plates
     
     def _canny_edge_detection(self, gray_image):
         """Phát hiện biên sử dụng Canny"""
-        # Làm mịn ảnh trước khi detect biên
-        blurred = cv2.GaussianBlur(gray_image, (5, 5), 0)
-        edges = cv2.Canny(blurred, self.canny_thresh1, self.canny_thresh2)
+        edges = cv2.Canny(gray_image, self.canny_thresh1, self.canny_thresh2)
         return edges
     
     def _morphological_operations(self, edges):
@@ -49,6 +57,7 @@ class PlateDetector:
     
     def _find_plate_contours(self, morph_image, original_image):
         plates = []
+        h, w = original_image.shape[:2]
         
         # Tìm contours
         contours, _ = cv2.findContours(morph_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -56,15 +65,19 @@ class PlateDetector:
         for contour in contours:
             # Lọc contour theo diện tích
             area = cv2.contourArea(contour)
-            if area < 500 or area > 80000:  # Extended range for foreign plates
+            if area < self.area_min or area > self.area_max:
                 continue
             
             # Lấy bounding rect
-            x, y, w, h = cv2.boundingRect(contour)
+            x, y, w_box, h_box = cv2.boundingRect(contour)
             
-            # Lọc theo tỷ lệ (biển số thường có tỷ lệ ~ 2:1 đến 5:1)
-            aspect_ratio = w / h
-            if aspect_ratio < 1.2 or aspect_ratio > 7:
+            # Bộ lọc vị trí: biển số không nằm quá trên
+            if y > h * self.max_y_ratio:
+                continue
+            
+            # Lọc theo tỷ lệ (biển số thường có tỷ lệ 1.5:1 đến 6.5:1)
+            aspect_ratio = w_box / h_box
+            if aspect_ratio < self.aspect_ratio_min or aspect_ratio > self.aspect_ratio_max:
                 continue
             
             # Lọc theo solidity (độ đặc của contour)
@@ -72,10 +85,10 @@ class PlateDetector:
             hull_area = cv2.contourArea(hull)
             if hull_area > 0:
                 solidity = area / hull_area
-                if solidity < 0.25:
+                if solidity < self.solidity_min:
                     continue
             
-            plates.append((x, y, w, h))
+            plates.append((x, y, w_box, h_box))
         
         return plates
     

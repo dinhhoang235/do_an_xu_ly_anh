@@ -125,6 +125,7 @@ class CharacterRecognizer:
         
         return features
     
+    # Phân vùng ký tự (Segment Characters)
     def segment_characters(self, plate_image):
         # Chuyển ảnh xám nếu cần
         if len(plate_image.shape) == 3:

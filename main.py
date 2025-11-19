@@ -18,11 +18,15 @@ sys.path.append(str(Path(__file__).parent / "src"))
 
 from src.character_recognizer import CharacterRecognizer
 from src.preprocessor import Preprocessor
+from src.plate_detector import PlateDetector
+from src.skew_corrector import SkewCorrector
 
 class LicensePlateSystem:
     def __init__(self):
         self.preprocessor = Preprocessor()
         self.char_recognizer = CharacterRecognizer()
+        self.plate_detector = PlateDetector()
+        self.skew_corrector = SkewCorrector()
         
         # Khởi tạo hệ thống
         self._initialize_system()
@@ -61,9 +65,15 @@ class LicensePlateSystem:
     
     def process_image(self, image_path, visualize=True):
         """
-        Xử lý ảnh đầu vào và trả về kết quả nhận dạng
+        Pipeline hoàn chỉnh từng bước:
+        1. Tiền xử lý
+        2. Phát hiện biển số
+        3. Hiệu chỉnh góc nghiêng
+        4. Segment ký tự
+        5. Nhận dạng ký tự
         """
         print(f"🔍 Đang xử lý ảnh: {image_path}")
+        print("="*60)
         
         # Đọc ảnh
         image = cv2.imread(image_path)
@@ -72,37 +82,91 @@ class LicensePlateSystem:
             return None
         
         start_time = time.time()
+        h, w = image.shape[:2]
+        print(f"📏 Kích thước ảnh: {w}x{h}")
         
-        # Segment characters từ ảnh
-        char_images = self.char_recognizer.segment_characters(image)
+        # STEP 1: Tiền xử lý ảnh
+        print("\n[Step 1] Tiền xử lý ảnh...")
+        preprocessed = self.preprocessor.preprocess(image)
+        print("  ✅ Đã preprocess (grayscale, blur)")
         
-        if len(char_images) == 0:
-            print("⚠️  Không phát hiện được ký tự nào")
+        # STEP 2: Phát hiện biển số
+        print("\n[Step 2] Phát hiện biển số...")
+        plates = self.plate_detector.detect_plates(preprocessed)
+        print(f"  🎯 Phát hiện: {len(plates)} biển số")
+        
+        if len(plates) == 0:
+            print("  ⚠️  Không phát hiện biển số nào")
             return None
         
-        # Extract features và recognize
-        features_list = [self.extract_features(char) for char in char_images]
-        features_array = np.array(features_list)
-        predictions = self.model.predict(features_array)
-        plate_text = ''.join(predictions)
+        results = []
+        
+        # STEP 3-5: Với mỗi biển số
+        print("\n[Step 3-5] Hiệu chỉnh góc - Segment ký tự - Nhận dạng...")
+        for plate_idx, (x, y, w_plate, h_plate) in enumerate(plates, 1):
+            # Crop biển số từ ảnh gốc
+            plate_roi = image[y:y+h_plate, x:x+w_plate]
+            
+            print(f"\n  Biển số #{plate_idx}: ({x}, {y}) - {w_plate}x{h_plate}")
+            
+            # Step 3: Hiệu chỉnh góc nghiêng
+            corrected_roi, skew_angle = self.skew_corrector.correct_skew(plate_roi)
+            if abs(skew_angle) > 0.5:
+                print(f"    🔄 Hiệu chỉnh góc: {skew_angle:.1f}°")
+                plate_roi = corrected_roi
+            else:
+                print(f"    ✅ Góc đã thẳng ({skew_angle:.1f}°)")
+            
+            # Step 4: Segment ký tự
+            char_images = self.char_recognizer.segment_characters(plate_roi)
+            
+            if len(char_images) == 0:
+                print(f"    ⚠️  Không segment được ký tự")
+                continue
+            
+            print(f"    📋 Segment: {len(char_images)} ký tự")
+            
+            # Nhận dạng
+            if self.model is not None:
+                features_list = [self.extract_features(char) for char in char_images]
+                features_array = np.array(features_list)
+                predictions = self.model.predict(features_array)
+                plate_text = ''.join(predictions)
+                print(f"    ✅ Kết quả: {plate_text}")
+            else:
+                plate_text = "N/A"
+                print(f"    ⚠️  Model không sẵn sàng")
+            
+            results.append({
+                'position': (x, y, w_plate, h_plate),
+                'text': plate_text,
+                'char_count': len(char_images)
+            })
         
         processing_time = time.time() - start_time
         
-        result = {
-            'plate_text': plate_text,
-            'char_count': len(plate_text),
-            'processing_time': processing_time
-        }
-        
-        print(f"📋 Kết quả: {plate_text}")
-        print(f"📊 Số ký tự: {len(plate_text)}")
-        print(f"⏱️  Thời gian xử lý: {processing_time:.3f}s")
-        
-        # Visualize kết quả
+        # Visualize
         if visualize:
-            self._visualize_result(image, plate_text, char_images, predictions)
+            result_image = image.copy()
+            
+            # Vẽ biển số bounding boxes
+            for plate_idx, (x, y, w_p, h_p) in enumerate(plates, 1):
+                cv2.rectangle(result_image, (x, y), (x + w_p, y + h_p), (0, 255, 0), 2)
+                
+                # Thêm text nhận dạng nếu có
+                if plate_idx <= len(results):
+                    plate_text = results[plate_idx - 1]['text']
+                    cv2.putText(result_image, plate_text, (x, y - 5),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
+            cv2.imshow(f"License Plate Recognition - {Path(image_path).name}", result_image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
         
-        return result
+        print(f"\n⏱️  Thời gian xử lý: {processing_time:.3f}s")
+        print("="*60)
+        
+        return results
     
     def process_video(self, video_path, output_path=None):
         """
