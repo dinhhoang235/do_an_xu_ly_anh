@@ -20,6 +20,9 @@ def debug_segmentation_with_visualization():
     recognizer = CharacterRecognizer()
     preprocessor = Preprocessor()
     
+    # Create output directory for saving preprocessing results
+    Path("debug_output").mkdir(exist_ok=True)
+    
     print(f"\n{'Image':<20} {'Ground Truth':<15} {'Detected':<15} {'Match?':<10}")
     print("-" * 60)
     
@@ -47,8 +50,10 @@ def debug_segmentation_with_visualization():
             if plate_img.size == 0:
                 continue
             
-            # Preprocess
-            gray, processed = preprocessor.preprocess(plate_img)
+            # Preprocess - chi tiết từng bước
+            img_grayscale = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
+            img_median = cv2.medianBlur(img_grayscale, preprocessor.MEDIAN_BLUR_SIZE)
+            img_blurred = cv2.GaussianBlur(img_median, preprocessor.GAUSSIAN_BLUR_SIZE, 0)
             
             # Segment characters
             char_images = recognizer.segment_characters(plate_img)
@@ -60,21 +65,33 @@ def debug_segmentation_with_visualization():
             
             print(f"{image_name:<20} {ground_truth:<15} {detected_count:<15} {match:<10}")
             
-            # Visualization
+            # Visualization - tất cả bước tiền xử lý
             fig_width = 400
-            cv2.imshow(f"Original - {image_name}", 
-                      cv2.resize(plate_img, (fig_width, int(fig_width * plate_img.shape[0] / plate_img.shape[1]))))
-            cv2.imshow(f"Gray - {image_name}", 
-                      cv2.resize(gray, (fig_width, int(fig_width * gray.shape[0] / gray.shape[1]))))
-            cv2.imshow(f"Processed - {image_name}", 
-                      cv2.resize(processed, (fig_width, int(fig_width * processed.shape[0] / processed.shape[1]))))
+            height = int(fig_width * plate_img.shape[0] / plate_img.shape[1])
+            
+            # Hiển thị từng bước
+            cv2.imshow(f"01_Original - {image_name}", cv2.resize(plate_img, (fig_width, height)))
+            cv2.imshow(f"02_Grayscale - {image_name}", cv2.resize(img_grayscale, (fig_width, height)))
+            cv2.imshow(f"03_Median - {image_name}", cv2.resize(img_median, (fig_width, height)))
+            cv2.imshow(f"04_Blurred - {image_name}", cv2.resize(img_blurred, (fig_width, height)))
+            
+            # Save preprocessing steps
+            output_dir = Path("debug_output") / image_name.replace(".png", "").replace(".jpg", "")
+            output_dir.mkdir(exist_ok=True)
+            
+            cv2.imwrite(str(output_dir / "01_original.png"), plate_img)
+            cv2.imwrite(str(output_dir / "02_grayscale.png"), img_grayscale)
+            cv2.imwrite(str(output_dir / "03_median.png"), img_median)
+            cv2.imwrite(str(output_dir / "04_blurred.png"), img_blurred)
             
             # Display segmented characters
             for i, char_img in enumerate(char_images):
                 char_resized = cv2.resize(char_img, (80, 120))
                 cv2.imshow(f"Char {i} - {image_name}", char_resized)
+                cv2.imwrite(str(output_dir / f"char_{i:02d}.png"), char_img)
             
-            print(f"  👉 Press any key to continue or 'q' to quit...")
+            print(f"  👉 Ảnh đã lưu vào: debug_output/{image_name.replace('.png', '').replace('.jpg', '')}/")
+            print(f"  👉 Nhấn phím để tiếp tục hoặc 'q' để thoát...")
             key = cv2.waitKey(0)
             cv2.destroyAllWindows()
             
