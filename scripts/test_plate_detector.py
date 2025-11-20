@@ -12,8 +12,9 @@ import numpy as np
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.plate_detector import PlateDetector
+from src.preprocessor import Preprocessor
 
-def test_single_image(image_path, detector):
+def test_single_image(image_path, detector, preprocessor):
     """Test phát hiện biển số trên một ảnh"""
     print(f"\n{'='*60}")
     print(f"🔍 Kiểm tra ảnh: {os.path.basename(image_path)}")
@@ -27,8 +28,11 @@ def test_single_image(image_path, detector):
     
     print(f"📏 Kích thước ảnh: {image.shape}")
     
+    # Tiền xử lý ảnh
+    preprocessed = preprocessor.preprocess(image)
+    
     # Phát hiện biển số
-    plates = detector.detect_plates(image)
+    plates = detector.detect_plates(preprocessed)
     
     print(f"🎯 Phát hiện được {len(plates)} biển số")
     
@@ -51,6 +55,7 @@ def test_single_image(image_path, detector):
 def test_batch_images(image_dir, num_images=10):
     """Test phát hiện trên nhiều ảnh"""
     detector = PlateDetector()
+    preprocessor = Preprocessor()
     
     # Lấy danh sách ảnh
     image_paths = sorted(Path(image_dir).glob("*.png"))[:num_images]
@@ -65,7 +70,7 @@ def test_batch_images(image_dir, num_images=10):
     
     results = []
     for image_path in image_paths:
-        plates = test_single_image(str(image_path), detector)
+        plates = test_single_image(str(image_path), detector, preprocessor)
         results.append({
             'image': image_path.name,
             'num_plates': len(plates) if plates else 0,
