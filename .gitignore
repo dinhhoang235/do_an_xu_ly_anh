@@ -147,9 +147,6 @@ tmp/
 *.csv
 
 # Large datasets
-datasets/kaggle_foreign/images/
-datasets/kaggle_foreign/test/
+datasets/
 *.zip
 *.tar.gz
-
-datasets
