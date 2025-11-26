@@ -134,6 +134,7 @@ dmypy.json
 models/*.pkl
 models/*.pth
 models/*.h5
+models
 *.joblib
 *.pickle
 outputs/
@@ -142,8 +143,13 @@ temp/
 tmp/
 *.tmp
 
+*.pt
+*.csv
+
 # Large datasets
 datasets/kaggle_foreign/images/
 datasets/kaggle_foreign/test/
 *.zip
 *.tar.gz
+
+datasets

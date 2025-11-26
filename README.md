@@ -2,7 +2,7 @@
 
 Nhận dạng ký tự từ biển số xe sử dụng xử lý ảnh truyền thống và ML
 
-**🎯 Performance**: 57.81% accuracy | Best hybrid model trained on 77 images
+**🎯 Performance**: 80.0% accuracy on LP-characters dataset | YOLO: 79.1% | CV: 80.8%
 
 ---
 
@@ -112,13 +112,34 @@ python scripts/full_pipeline.py
 | `scripts/test_models.py` | Benchmark & so sánh models |
 | `scripts/full_pipeline.py` | Run full pipeline in one go |
 
+## 🧪 Test Scripts
+
+Scripts để test và so sánh pipeline:
+
+| Script | Mục đích |
+|--------|---------|
+| `scripts/test_full_pipeline_lp_characters.py` | Test pipeline trên LP-characters (dùng GT bbox) |
+| `scripts/test_full_pipeline_lp_characters_plate_detector.py` | So sánh YOLO vs CV detection trên LP-characters |
+| `scripts/test_full_pipeline_kaggle_foreign.py` | Test pipeline trên Kaggle Foreign test |
+| `scripts/test_plate_detector.py` | Test riêng plate detection |
+| `scripts/test_hybrid_viz.py` | Test visualization pipeline |
+
 ---
 
 ## 📊 Dataset & Model Performance
 
+**Datasets Used:**
+- **LP-characters**: https://www.kaggle.com/datasets/francescopettini/license-plate-characters-detection-ocr?select=LP-characters
+- **Kaggle Foreign**: Custom dataset for testing
+
+**LP-characters Dataset Results (335 images):**
+- **Overall**: 268/335 correct (**80.0%**)
+- **YOLO Detection**: 121/153 correct (79.1%)
+- **CV Detection**: 147/182 correct (**80.8%**)
+
 | Model | Training Data | Accuracy | Ghi chú |
 |-------|---------------|----------|--------|
-| **Hybrid KNN** ⭐ | 31 templates + 46 manual | **57.81%** | **Best performance** |
+| **Hybrid KNN** ⭐ | 31 templates + 46 manual | **57.81%** | **Best on Kaggle Foreign** |
 | Templates-only | 31 manual | 5.76% | Underfitting |
 | Auto-labeled | 3100+ EasyOCR | 10.76% | Noisy data |
 
@@ -128,10 +149,15 @@ python scripts/full_pipeline.py
 
 ## ❓ FAQ
 
-**Q: Tại sao chỉ 57.81%?**
+**Q: Tại sao chỉ 57.81% trên Kaggle Foreign?**
 - Segmentation yếu (10/17 detect)
 - Dữ liệu nhỏ (77 ảnh)
 - Font chữ biến động
+
+**Q: Tại sao 80% trên LP-characters?**
+- Dataset sạch, biển số rõ ràng
+- GT bbox chính xác
+- Character segmentation từ XML annotations
 
 **Q: Làm sao tăng accuracy?**
 - Cách 1: Thêm ảnh test + gán nhãn → `extract_manual_labels.py` → train
@@ -152,6 +178,15 @@ python main.py --image datasets/kaggle_foreign/test/Cars0.png
 # Batch xử lý
 python main.py --batch datasets/kaggle_foreign/test --output results.csv
 
+# Test pipeline trên LP-characters
+python scripts/test_full_pipeline_lp_characters.py
+
+# So sánh YOLO vs CV detection
+python scripts/test_full_pipeline_lp_characters_plate_detector.py
+
+# Test trên Kaggle Foreign
+python scripts/test_full_pipeline_kaggle_foreign.py
+
 # Tạo manual labels từ test
 python scripts/extract_manual_labels.py
 
@@ -162,13 +197,13 @@ python scripts/filter_best_templates.py
 python scripts/train_knn_hybrid.py
 
 # So sánh 3 model
-python scripts/test_all_models.py
+python scripts/test_models.py
 
 # Debug segmentation
 python scripts/debug_seg_detail.py
 
 # Test visualization
-python tests/test_hybrid_viz.py
+python scripts/test_hybrid_viz.py
 
 # Đánh giá chi tiết
 python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
