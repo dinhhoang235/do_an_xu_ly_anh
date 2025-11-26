@@ -137,6 +137,13 @@ Scripts để test và so sánh pipeline:
 - **YOLO Detection**: 121/153 correct (79.1%)
 - **CV Detection**: 147/182 correct (**80.8%**)
 
+**📊 Giải thích về Chỉ số Performance:**
+Chỉ số này là độ chính xác (accuracy) của toàn bộ pipeline nhận diện biển số xe, được đo lường dựa trên việc so sánh chính xác chuỗi ký tự dự đoán với chuỗi ground truth (đúng 100%).
+- **Overall**: Tổng số dự đoán đúng trên tổng số lần thử nghiệm thành công (tìm thấy biển số).
+- **YOLO**: Độ chính xác khi sử dụng YOLO detector.
+- **CV**: Độ chính xác khi sử dụng detector dựa trên OpenCV.
+Trong code, `is_correct = pred_text == gt_text` và chỉ tính khi detector tìm thấy biển số (không tính các trường hợp không phát hiện).
+
 | Model | Training Data | Accuracy | Ghi chú |
 |-------|---------------|----------|--------|
 | **Hybrid KNN** ⭐ | 31 templates + 46 manual | **57.81%** | **Best on Kaggle Foreign** |
