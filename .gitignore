@@ -150,3 +150,5 @@ tmp/
 datasets/
 *.zip
 *.tar.gz
+
+*png
