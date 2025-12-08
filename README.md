@@ -1,221 +1,257 @@
 # 🚗 License Plate Recognition System
 
-Nhận dạng ký tự từ biển số xe sử dụng xử lý ảnh truyền thống và ML
-
-**🎯 Performance**: 80.0% accuracy on LP-characters dataset | YOLO: 79.1% | CV: 80.8%
+Hệ thống nhận dạng biển số xe so sánh **Traditional CV+KNN** vs **YOLO v8+CNN** trên dataset LP-characters.
 
 ---
 
-## ⚡ Quick Start
+## 📊 Key Results
+
+| Approach | Accuracy | Speed | Correct |
+|----------|----------|-------|---------|
+| **Traditional CV+KNN** | 82.30% | 52.78ms | 172/209 |
+| **YOLO v8+CNN** | 89.00% | 2.76ms | 186/209 |
+| **Winner** | CNN +6.70% | CNN 19.1x faster | CNN |
+
+---
+
+## 🚀 Quick Start
 
 ```bash
-# 1. Cài đặt dependencies
+# 1. Setup
 pip install -r requirements.txt
 
-# 2. Chạy ngay (model đã huấn luyện sẵn)
-python main.py --image datasets/kaggle_foreign/test/Cars0.png
+# 2. Compare both approaches
+python scripts/compare_traditional_vs_yolo.py
 
-# 3. Hoặc xử lý batch
-python main.py --batch datasets/kaggle_foreign/test --output results.csv
+# 3. Generate reports
+python scripts/generate_comparison_report.py
+python scripts/visualize_comparison.py
+```
 
-# 4. Đánh giá trên dataset
-python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
+Results sẽ save tại:
+- `comparison_results.csv` - Chi tiết từng image
+- `comparison_summary.json` - Metrics tổng hợp  
+- `COMPARISON_REPORT.txt/md` - Report đầy đủ
+- `comparison_visualization.png` - Charts
+- `results/[image_name]/` - Processing steps (original, preprocessed, segmented, recognized)
+
+---
+
+## 🏗️ Architecture
+
+### Traditional Approach
+```
+Input Image
+    ↓
+Preprocessing (grayscale, blur)
+    ↓
+Character Segmentation
+    ↓
+HOG Feature Extraction
+    ↓
+KNN Classification
+    ↓
+Output
+```
+
+### Deep Learning Approach  
+```
+Input Image
+    ↓
+Preprocessing
+    ↓
+Character Segmentation
+    ↓
+CNN Feature Learning
+    ↓
+Character Recognition
+    ↓
+Output
 ```
 
 ---
 
-## 📖 4 Chế Độ Chính
+## 📁 Project Structure
 
-### 1️⃣ Single Image Processing
-Xử lý một ảnh và hiển thị kết quả với visualization
-```bash
-python main.py --image path/to/image.jpg
 ```
+src/
+├── preprocessor.py          # Image preprocessing
+├── plate_detector.py        # Plate detection (contour-based)
+├── skew_corrector.py        # Angle correction
+├── character_recognizer.py  # Character segmentation + KNN
+├── yolo_plate_detector.py   # YOLO v8 plate detector
+└── cnn_recognizer.py        # CNN model (SimpleCNN + training)
 
-### 2️⃣ Batch Processing
-Xử lý một folder ảnh và lưu kết quả vào CSV
-```bash
-python main.py --batch path/to/folder --output results.csv
-```
+scripts/
+├── compare_traditional_vs_yolo.py    # Main comparison script
+├── generate_comparison_report.py      # Report generation
+├── visualize_comparison.py            # Visualization & analysis
+├── train_knn_from_lp_dataset.py      # KNN training
+├── extract_characters_from_lp_dataset.py  # Character extraction
+├── prepare_lp_dataset_for_yolo.py    # YOLO dataset prep
+└── train_yolov8_fast.py              # YOLO training
 
-### 3️⃣ Evaluation & Benchmark
-Đánh giá hệ thống trên dataset với ground truth annotations
-```bash
-python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
-```
+datasets/
+├── LP-characters/           # Main dataset
+│   ├── images/
+│   ├── annotations/
+│   └── characters_organized/
+└── lp_characters_yolo/      # YOLO format
 
----
+models/
+├── knn_character_recognizer_lp_dataset.pkl  # Trained KNN
+├── yolov8_plate_detector.pt                 # YOLO model
+└── yolov8_yolov8n_mac/                      # YOLO training output
 
-## 🔄 Pipeline Chi Tiết
-
-Mỗi ảnh đi qua 5 bước xử lý:
-
-1. **Tiền xử lý**: Chuyển grayscale, blur, normalize
-2. **Phát hiện biển số**: Contour detection, bounding box
-3. **Hiệu chỉnh góc nghiêng**: Skew correction
-4. **Phân vùng ký tự**: Cắt từng ký tự từ biển số
-5. **Nhận dạng ký tự**: KNN prediction trên 20x30 features
-
----
-
-## 🎓 Xây Dựng Model Từ Đầu
-
-Nếu muốn huấn luyện lại model hoặc thêm dữ liệu:
-
-```bash
-# Step 1: Auto-extract templates từ 473 ảnh
-python scripts/auto_extract_and_label_kaggle.py
-
-# Step 2: Cắt + gán nhãn từ 17 test images (ground truth)
-python scripts/extract_manual_labels.py
-
-# Step 3: Filter best templates
-python scripts/filter_best_templates.py
-
-# Step 4: Train hybrid KNN model
-python scripts/train_knn_hybrid.py
-
-# Step 5: Test models
-python scripts/test_models.py
-```
-
-**Hoặc chạy full pipeline một lần:**
-```bash
-python scripts/full_pipeline.py
+results/                      # Output folder
+├── [image_name]/
+│   ├── original.jpg
+│   ├── traditional_knn/
+│   │   ├── preprocessed.jpg
+│   │   ├── skew_corrected.jpg
+│   │   ├── segmented.jpg
+│   │   └── recognized.jpg
+│   └── yolo_cnn/
+│       ├── preprocessed.jpg
+│       ├── skew_corrected.jpg
+│       ├── segmented.jpg
+│       └── recognized.jpg
 ```
 
 ---
 
-## 🎯 Core Components
+## 📚 Core Components
 
-| Tệp | Mục đích |
-|-----|---------|
-| `main.py` | Entry point - 4 chế độ chính (single/batch/video/eval) |
-| `src/preprocessor.py` | Tiền xử lý ảnh (grayscale, blur, normalize) |
-| `src/plate_detector.py` | Phát hiện biển số (contour-based) |
-| `src/skew_corrector.py` | Hiệu chỉnh góc nghiêng |
-| `src/character_recognizer.py` | Segment + nhận dạng ký tự |
-| `models/knn_character_recognizer_hybrid.pkl` | Pre-trained KNN model (57.81%) |
+| Component | Type | Purpose |
+|-----------|------|---------|
+| **Preprocessor** | OpenCV | Grayscale, blur, denoise |
+| **PlateDetector** | CV | Contour-based detection |
+| **SkewCorrector** | CV | Angle correction (moments/hough/contour) |
+| **YOLOPlateDetector** | DL | YOLO v8 detection |
+| **CharacterRecognizer** | CV+ML | Segmentation + HOG + KNN |
+| **CNNRecognizer** | DL | SimpleCNN (3-layer conv + 2-layer dense) |
 
 ---
 
-## 🛠️ Training Scripts
+## 🎯 Key Scripts
 
-Để xây dựng model từ đầu:
-
-| Script | Mục đích |
+| Script | Purpose |
 |--------|---------|
-| `scripts/auto_extract_and_label_kaggle.py` | Auto-extract templates từ 473 ảnh |
-| `scripts/extract_manual_labels.py` | Cắt + gán nhãn ground truth từ test images |
-| `scripts/filter_best_templates.py` | Chọn best 31 templates |
-| `scripts/train_knn_hybrid.py` | Train KNN hybrid model |
-| `scripts/test_models.py` | Benchmark & so sánh models |
-| `scripts/full_pipeline.py` | Run full pipeline in one go |
-
-## 🧪 Test Scripts
-
-Scripts để test và so sánh pipeline:
-
-| Script | Mục đích |
-|--------|---------|
-| `scripts/test_full_pipeline_lp_characters.py` | Test pipeline trên LP-characters (dùng GT bbox) |
-| `scripts/test_full_pipeline_lp_characters_plate_detector.py` | So sánh YOLO vs CV detection trên LP-characters |
-| `scripts/test_full_pipeline_kaggle_foreign.py` | Test pipeline trên Kaggle Foreign test |
-| `scripts/test_plate_detector.py` | Test riêng plate detection |
-| `scripts/test_hybrid_viz.py` | Test visualization pipeline |
+| `compare_traditional_vs_yolo.py` | Main comparison on 209 test images |
+| `generate_comparison_report.py` | Generate TXT/MD reports |
+| `visualize_comparison.py` | Create comparison charts |
+| `train_knn_from_lp_dataset.py` | Train KNN with augmentation |
+| `extract_characters_from_lp_dataset.py` | Extract characters from XML |
+| `prepare_lp_dataset_for_yolo.py` | Convert to YOLO format |
+| `train_yolov8_fast.py` | Train YOLO (Mac optimized) |
 
 ---
 
-## 📊 Dataset & Model Performance
+## 📊 Dataset Info
 
-**Datasets Used:**
-- **LP-characters**: https://www.kaggle.com/datasets/francescopettini/license-plate-characters-detection-ocr?select=LP-characters
-- **Kaggle Foreign**: Custom dataset for testing
+**LP-characters Dataset:**
+- 209 test images with character-level annotations
+- 36 character classes (0-9, A-Z)
+- XML format with bounding boxes
+- Clean, well-organized data
 
-**LP-characters Dataset Results (335 images):**
-- **Overall**: 268/335 correct (**80.0%**)
-- **YOLO Detection**: 121/153 correct (79.1%)
-- **CV Detection**: 147/182 correct (**80.8%**)
-
-**📊 Giải thích về Chỉ số Performance:**
-Chỉ số này là độ chính xác (accuracy) của toàn bộ pipeline nhận diện biển số xe, được đo lường dựa trên việc so sánh chính xác chuỗi ký tự dự đoán với chuỗi ground truth (đúng 100%).
-- **Overall**: Tổng số dự đoán đúng trên tổng số lần thử nghiệm thành công (tìm thấy biển số).
-- **YOLO**: Độ chính xác khi sử dụng YOLO detector.
-- **CV**: Độ chính xác khi sử dụng detector dựa trên OpenCV.
-Trong code, `is_correct = pred_text == gt_text` và chỉ tính khi detector tìm thấy biển số (không tính các trường hợp không phát hiện).
-
-| Model | Training Data | Accuracy | Ghi chú |
-|-------|---------------|----------|--------|
-| **Hybrid KNN** ⭐ | 31 templates + 46 manual | **57.81%** | **Best on Kaggle Foreign** |
-| Templates-only | 31 manual | 5.76% | Underfitting |
-| Auto-labeled | 3100+ EasyOCR | 10.76% | Noisy data |
-
-**Hybrid model** kết hợp tốt nhất manual labels (ground truth) + auto-extracted templates.
+**Training Data:**
+- Traditional KNN: 2,026+ character samples with augmentation
+- CNN: Same 2,026+ samples, 80/20 train/val split
+- 20 epochs training, Adam optimizer
 
 ---
 
-## ❓ FAQ
+## 🔧 Advanced Usage
 
-**Q: Tại sao chỉ 57.81% trên Kaggle Foreign?**
-- Segmentation yếu (10/17 detect)
-- Dữ liệu nhỏ (77 ảnh)
-- Font chữ biến động
-
-**Q: Tại sao 80% trên LP-characters?**
-- Dataset sạch, biển số rõ ràng
-- GT bbox chính xác
-- Character segmentation từ XML annotations
-
-**Q: Làm sao tăng accuracy?**
-- Cách 1: Thêm ảnh test + gán nhãn → `extract_manual_labels.py` → train
-- Cách 2: Dùng Deep Learning (YOLO, CNN)
-
-**Q: Có thể dùng production?**
-- ✅ Batch processing + manual confirmation
-- ❌ Full automation (chưa đủ chính xác)
-
----
-
-## 📝 Useful Commands
+### Train Custom Models
 
 ```bash
-# Chạy model hiện tại
-python main.py --image datasets/kaggle_foreign/test/Cars0.png
+# Extract characters from dataset
+python scripts/extract_characters_from_lp_dataset.py
 
-# Batch xử lý
-python main.py --batch datasets/kaggle_foreign/test --output results.csv
+# Train KNN with augmentation
+python scripts/train_knn_from_lp_dataset.py
 
-# Test pipeline trên LP-characters
-python scripts/test_full_pipeline_lp_characters.py
+# Prepare YOLO dataset
+python scripts/prepare_lp_dataset_for_yolo.py
 
-# So sánh YOLO vs CV detection
-python scripts/test_full_pipeline_lp_characters_plate_detector.py
+# Train YOLO (Mac M4 optimized)
+python scripts/train_yolov8_fast.py
+```
 
-# Test trên Kaggle Foreign
-python scripts/test_full_pipeline_kaggle_foreign.py
+### Analyze Results
 
-# Tạo manual labels từ test
-python scripts/extract_manual_labels.py
+```bash
+# View detailed comparison
+python scripts/visualize_comparison.py
 
-# Filter templates tốt nhất
-python scripts/filter_best_templates.py
-
-# Train lại model
-python scripts/train_knn_hybrid.py
-
-# So sánh 3 model
-python scripts/test_models.py
-
-# Debug segmentation
-python scripts/debug_seg_detail.py
-
-# Test visualization
-python scripts/test_hybrid_viz.py
-
-# Đánh giá chi tiết
-python main.py --eval datasets/kaggle_foreign/test --annotations datasets/kaggle_foreign/test_annotations.csv
+# Check specific images in results/[name]/
+ls results/0000/traditional_knn/
+ls results/0000/yolo_cnn/
 ```
 
 ---
 
-**Version**: 1.0 | **Status**: Ready to use ✅
+## 💡 Key Insights
+
+✅ **CNN Advantages:**
+- 6.70% higher accuracy (89.00% vs 82.30%)
+- 19.1x faster inference (2.76ms vs 52.78ms)
+- Better feature learning with deep neural networks
+
+✅ **Traditional Advantages:**
+- Lightweight, no GPU needed
+- Explainable (HOG features visible)
+- Good baseline comparison
+
+✅ **Recommendations:**
+- **Production**: Use CNN for best accuracy + speed
+- **Resource-limited**: Use Traditional CV+KNN
+- **Comparison**: Both approaches valuable for benchmarking
+
+---
+
+## 📈 Performance Metrics
+
+Both methods trained on **2,026 character samples** from LP-characters:
+
+- **Character-level accuracy**: CNN 89.00%, Traditional 82.30%
+- **Processing time**: CNN 2.76ms/image, Traditional 52.78ms/image
+- **GPU**: Optional (CNN faster on GPU/MPS)
+- **Inference**: Both real-time capable
+
+---
+
+## 🛠️ Requirements
+
+- Python 3.8+
+- PyTorch 2.0+
+- OpenCV 4.10+
+- scikit-learn 1.5+
+- YOLO v8 (ultralytics)
+- See `requirements.txt` for full list
+
+---
+
+## 📝 Output Files
+
+After running comparison:
+
+```
+comparison_results.csv           # Per-image results
+comparison_summary.json          # Aggregate metrics
+COMPARISON_REPORT.txt           # Detailed text report
+COMPARISON_REPORT.md            # Markdown version
+comparison_visualization.png    # Charts (accuracy, speed, etc)
+results/                        # Folder with images
+├── 0000/original.jpg
+├── 0000/traditional_knn/{4 images}
+├── 0000/yolo_cnn/{4 images}
+├── 0001/...
+└── ...
+```
+
+---
+
+**Status**: ✅ Ready to use | **Last Update**: 2025-12-08

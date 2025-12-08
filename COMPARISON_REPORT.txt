@@ -1,0 +1,89 @@
+================================================================================
+COMPARISON REPORT: TRADITIONAL CV + KNN vs YOLO v8 + CNN
+================================================================================
+
+Report Generated: 2025-12-08 18:49:24
+Dataset: LP-characters
+Total Images Tested: 209
+
+--------------------------------------------------------------------------------
+RESULTS SUMMARY
+--------------------------------------------------------------------------------
+
+📊 Traditional CV + KNN:
+   ✓ Accuracy: 82.30%
+   ✓ Correct: 172/209
+   ✓ Avg Time per Image: 52.78ms
+   ✓ Character Accuracy: 82.30%
+
+📊 YOLO v8 + CNN:
+   ✓ Accuracy: 89.00%
+   ✓ Correct: 186/209
+   ✓ Avg Time per Image: 2.76ms
+   ✓ Character Accuracy: 89.00%
+
+📈 Improvement (CNN vs Traditional): +6.70%
+
+Speed Comparison:
+   ✓ CNN is 19.10x faster than Traditional
+   ✓ Time Difference: 50.01ms per image
+
+--------------------------------------------------------------------------------
+DETAILED ANALYSIS
+--------------------------------------------------------------------------------
+
+1. ACCURACY COMPARISON
+   - Traditional CV + KNN: 82.30%
+   - YOLO v8 + CNN:      89.00%
+   - Winner: CNN 🏆
+   - Difference: +6.70%
+
+2. SPEED COMPARISON
+   - Traditional CV + KNN: 52.78ms/image
+   - YOLO v8 + CNN:      2.76ms/image
+   - Winner: CNN 🏆
+   - Speedup: 19.10x
+
+3. CHARACTER-LEVEL ACCURACY
+   - Traditional CV + KNN: 82.30%
+   - YOLO v8 + CNN:      89.00%
+   - Improvement: +6.70%
+
+4. ERROR DISTRIBUTION
+   Traditional CV + KNN:
+   ✗ Wrong Predictions: 37/209 (17.70%)
+   
+   YOLO v8 + CNN:
+   ✗ Wrong Predictions: 23/209 (11.00%)
+
+--------------------------------------------------------------------------------
+RECOMMENDATIONS
+--------------------------------------------------------------------------------
+
+✓ For Production Use:
+  • CNN offers 6.70% better accuracy
+  • CNN is 19.10x faster
+  • Recommended: Use YOLO v8 + CNN
+
+✓ For Real-time Applications:
+  • Both methods can process images in reasonable time
+  • CNN: 2.76ms/image (suitable for real-time)
+  • Traditional: 52.78ms/image (also acceptable)
+
+✓ For Resource-Limited Devices:
+  • Traditional CV + KNN is more lightweight
+  • No GPU required for Traditional method
+  • CNN requires more computation power
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+
+CNN (YOLO v8 + CNN) outperforms Traditional CV + KNN in:
+✓ Accuracy: +6.70% improvement
+✓ Speed: 19.10x faster
+✓ Character Recognition: +6.70% better
+
+The CNN approach is recommended for license plate recognition on LP-characters dataset.
+
+================================================================================

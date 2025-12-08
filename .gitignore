@@ -151,4 +151,5 @@ datasets/
 *.zip
 *.tar.gz
 
-*png
+*.png
+*.json
