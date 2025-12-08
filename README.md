@@ -150,6 +150,7 @@ results/                      # Output folder
 ## 📊 Dataset Info
 
 **LP-characters Dataset:**
+- 📥 Download: https://www.kaggle.com/datasets/francescopettini/license-plate-characters-detection-ocr?select=LP-characters
 - 209 test images with character-level annotations
 - 36 character classes (0-9, A-Z)
 - XML format with bounding boxes
